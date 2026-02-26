@@ -1,0 +1,244 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  //output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserType {
+  admin
+  resident
+  barangay_official
+}
+
+enum NotificationType {
+  concern
+  feedback
+  summons
+  mediation
+  update
+  alert
+  announcement
+  userVerification
+}
+
+enum ConcernStatus {
+  pending
+  inProgress
+  verified
+  canceled
+  approved
+  rejected
+  resolved
+}
+
+enum Validation {
+  pending
+  approved
+  rejected
+}
+
+model User {
+  //Fields
+  id              Int              @id @default(autoincrement())
+  fullname        String
+  email           String           @unique
+  password        String
+  address         String
+  profilePhoto    String?
+  position        String?
+  age             Int?
+  contactNumber   String
+  type            UserType         @default(admin)
+  createAt        DateTime         @default(now())
+  isVerified      Boolean          @default(false)
+  isActive        Boolean          @default(true)
+  barangay        String?
+  createdAt       DateTime         @default(now())
+  // ERD
+  // Resident Side
+  residentConcern Concern[]        @relation("ResidentReports")
+  //Polymorphic
+  userFeedback    Feedback[]       @relation("UserFeedbacks")
+  noticication    Notification[]   @relation("UserNotifications")
+  SystemFeedback  SystemFeedback[] @relation("UserSystemFeedback")
+
+  validatedConcerns Concern[]      @relation("ValidatedConcern")
+  archivedConcerns  Concern[]      @relation("ArchivedConcern")
+  userAnnouncement  Announcement[] @relation("UserAnnouncement")
+  assignedTo        Concern[]      @relation("AssignedConcern")
+
+  // Verification uploads (Resident side) 
+  verificationMedia Media?           @relation("UserVerificationMedia")
+  // Reviewed media (Admin side) 
+  reviewedMedia     Media[]          @relation("MediaReviewedBy")
+  //concernMessages   ConcernMessage[] @relation("UserConcernMessages")
+}
+
+enum MediaType {
+  photo
+  video
+  file
+}
+
+model Concern {
+  id                      Int              @id @default(autoincrement())
+  title                   String?
+  details                 String
+  location                String?
+  categoryId              Int?
+  // validation 
+  needsBarangayAssistance Boolean          @default(false)
+  isArchived              Boolean          @default(false)
+  ArchivedById            Int?
+  ArchivedBy              User?            @relation("ArchivedConcern", fields: [ArchivedById], references: [id])
+  archivedOn              DateTime?
+  validation              Validation       @default(pending)
+  validatedById           Int?
+  validatedBy             User?            @relation("ValidatedConcern", fields: [validatedById], references: [id])
+  validatedAt             DateTime?
+  assinedToId             Int?
+  assignedTo              User?            @relation("AssignedConcern", fields: [assinedToId], references: [id])
+  media                   Media[]
+  category                Category?        @relation("ConcernCategory", fields: [categoryId], references: [id])
+  other                   String?
+  status                  ConcernStatus    @default(pending)
+  userId                  Int
+  user                    User             @relation("ResidentReports", fields: [userId], references: [id])
+  updatedAt               DateTime?        @updatedAt
+  issuedAt                DateTime         @default(now())
+  updates                 ConcernUpdate[]  @relation("ConcernUpdates")
+  //concernMessages         ConcernMessage[] @relation("ConcernMessages")
+}
+
+//model ConcernMessage {
+//  id           Int      @id @default(autoincrement())
+//  message      String
+//  messageMedia Media[]  @relation("ConcernMessagesMedia")
+//  isHidden     Boolean  @default(false)
+//  createdAt    DateTime @default(now())
+//  updatedAt    DateTime @updatedAt
+//  userId       Int
+//  user         User     @relation("UserConcernMessages", fields: [userId], references: [id])
+//  concernId    Int
+//  concern      Concern  @relation("ConcernMessages", fields: [concernId], references: [id])
+//}
+
+model ConcernUpdate {
+  id            Int           @id @default(autoincrement())
+  updateMessage String
+  status        ConcernStatus
+  createdAt     DateTime      @default(now())
+  concernId     Int
+  concern       Concern       @relation("ConcernUpdates", fields: [concernId], references: [id])
+}
+
+model Media {
+  id                 String              @id @default(cuid())
+  name               String?
+  url                String
+  isAI               Boolean             @default(false)
+  type               MediaType
+  for                MediaFor?
+  verificationStatus VerificationStatus? @default(pending)
+  // Owner (Resident who uploaded) 
+  ownerId            Int?                @unique
+  owner              User?               @relation("UserVerificationMedia", fields: [ownerId], references: [id])
+  // Reviewer (Admin who reviewed) 
+  reviewedById       Int?
+  reviewedBy         User?               @relation("MediaReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt         DateTime?
+  fileType           String?
+  fileSize           Int?
+  summonId           Int?
+  concernId          Int?
+  concern            Concern?            @relation(fields: [concernId], references: [id])
+  concernMessagesId  Int?
+  //concernMessages    ConcernMessage?     @relation("ConcernMessagesMedia", fields: [concernMessagesId], references: [id])
+  feedbackId         Int?
+  feedback           Feedback?           @relation(fields: [feedbackId], references: [id])
+}
+
+enum VerificationStatus {
+  pending
+  rejected
+  approved
+}
+
+enum MediaFor {
+  concern
+  announcement
+  userverification
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  description String?
+  name        String
+  Concern     Concern[] @relation("ConcernCategory")
+}
+
+model Feedback {
+  //Fields
+  id               Int             @id @default(autoincrement())
+  title            String
+  issuedAt         DateTime        @default(now())
+  updatedAt        DateTime?       @updatedAt
+  //Relationships
+  userId           Int
+  user             User            @relation("UserFeedbacks", fields: [userId], references: [id])
+  //concernId Int
+  //concern   Concern   @relation("ConcernFeedback", fields: [concernId], references: [id])
+  media            Media[]
+  feedback         String
+  feedbackUpdateId Int?
+  feedbackUpdate   FeedbackUpdate? @relation(fields: [feedbackUpdateId], references: [id])
+}
+
+model FeedbackUpdate {
+  id Int @id @default(autoincrement())
+
+  feedbackMessage String
+  createdAt       DateTime @default(now())
+
+  feedbacks Feedback[]
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  itemId    Int?
+  message   String?
+  url       String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  userId    Int
+  user      User             @relation("UserNotifications", fields: [userId], references: [id])
+}
+
+model SystemFeedback {
+  id      Int    @id @default(autoincrement())
+  message String
+  userId  Int
+  user    User   @relation("UserSystemFeedback", references: [id], fields: [userId])
+}
+
+model Announcement {
+  id              Int       @id @default(autoincrement())
+  title           String
+  content         String
+  notifyOfficials Boolean   @default(false)
+  notifyResidents Boolean   @default(false)
+  userId          Int
+  user            User      @relation("UserAnnouncement", fields: [userId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
+}
