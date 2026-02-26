@@ -264,7 +264,7 @@ export const toggleUserActive = async (id) => {
   });
 };
 export const sendVerify = async (userId, metaData) => {
-  if (process.env.NODE_ENV === "development")console.log(metaData)
+  if (process.env.NODE_ENV === "development") console.log(metaData)
   await prisma.media.upsert({
     where: {
       ownerId: userId, // must be UNIQUE in schema
@@ -349,3 +349,23 @@ export const checkVerified = async (userId) => {
   if (process.env.NODE_ENV === "development") console.log("Status:", media.verificationStatus)
   return { verificationStatus: media.verificationStatus }
 }
+export const getStats = async () => {
+  const totalUsers = await prisma.user.count();
+
+  const totalResidents = await prisma.user.count({
+    where: { type: "resident" },
+  });
+
+  const totalBarangayOfficials = await prisma.user.count({
+    where: { type: "barangay_official" },
+  });
+
+  const totalConcerns = await prisma.concern.count();
+
+  return {
+    totalUsers,
+    totalResidents,
+    totalBarangayOfficials,
+    totalConcerns,
+  };
+};

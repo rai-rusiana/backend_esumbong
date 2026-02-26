@@ -100,10 +100,11 @@ export const updateConcernStatus = async (req, res) => {
 export const validateConcern = async (req, res) => {
   const { id } = req.params;
   const { validation } = req.body
+  const { type } = req.query
   const userId = req.user?.userId
 
   try {
-    await concernService.validateConcern(parseInt(id), validation, parseInt(userId));
+    await concernService.validateConcern(parseInt(id), validation, parseInt(userId), type);
     return res.status(200).json({ message: "Successfully validated the concern" })
 
   } catch (error) {

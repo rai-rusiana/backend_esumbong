@@ -251,3 +251,19 @@ export const checkVerified = async (req, res) => {
     })
   }
 }
+
+export const getStats = async (req, res) => {
+  
+  try {
+    const data = await userService.getStats()
+    return res.status(200).json({
+      message: "Success",
+      stats: data
+    })
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") console.error("Error Getting stats", error)
+    return res.status(500).json({
+      error: "An internal server error occured."
+    })
+  }
+}

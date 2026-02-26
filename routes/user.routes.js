@@ -33,7 +33,11 @@ router.get("/verification",
   authenticateToken,
   userController.checkVerified
 )
-
+router.get("/getStats",
+  authenticateToken,
+  authorizeRole("admin"),
+  userController.getStats
+)
 
 router.patch("/verification/:userId",
   authenticateToken,

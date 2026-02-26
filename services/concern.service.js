@@ -129,10 +129,10 @@ export const updateStatusConcern = async (userId, concernId, data) => {
   sendToUser(resident.user.userId, {
     type: "NEW_NOTIFICATION",
     notification: { url, message: `Your concern has been ${data.status}`, type: "concern" }
-  }) 
+  })
   sendToUser(resident.user.id, {
     type: "UPDATE",
-    update: {id: resident.id, message, type: "concern"}
+    update: { id: resident.id, message, type: "concern" }
   })
   const concernUpdate = await prisma.concernUpdate.create({
     data: {
@@ -318,7 +318,7 @@ export const getConcernUpdates = async (concernId) => {
   });
 };
 
-export const validateConcern = async (concernId, action, userId) => {
+export const validateConcern = async (concernId, action, userId, resolve) => {
   const now = new Date();
 
   // 1️⃣ Update the concern with validation info
@@ -329,18 +329,31 @@ export const validateConcern = async (concernId, action, userId) => {
       concernId
     }
   })
-  const updatedConcern = await prisma.concern.update({
-    where: { id: concernId },
-    data: {
-      validation: action,
-      validatedById: userId,
-      validatedAt: now,
-      status: "inProgress"
-    },
-    include: {
-      user: true, // to get the resident
-    },
-  });
+  let updatedConcern;
+  if (resolve === "resolve") {
+    updatedConcern = await prisma.concern.update({
+      where: { id: concernId },
+      data: {
+        status: resolve, // <-- only status updated
+      },
+      include: {
+        user: true, // to get the resident
+      },
+    });
+  } else {
+    updatedConcern = await prisma.concern.update({
+      where: { id: concernId },
+      data: {
+        validation: action,
+        validatedById: userId,
+        validatedAt: now,
+        status: "inProgress"
+      },
+      include: {
+        user: true, // to get the resident
+      },
+    });
+  }
 
 
   const url = `${baseUrl}/concern/${updatedConcern.id}`;
@@ -358,7 +371,7 @@ export const validateConcern = async (concernId, action, userId) => {
   });
   sendToUser(updatedConcern.user.id, {
     type: "UPDATE",
-    update: {id: updatedConcern.id, message, type: "concern"}
+    update: { id: updatedConcern.id, message, type: "concern" }
   })
   sendToUser(updatedConcern.user.id, {
     type: "NEW_NOTIFICATION",
@@ -586,10 +599,10 @@ export const deleteConcernMessage = async (id) => {
     where: { id }
   })
   if (!message) {
-    
+
     throw new AppError("Message not found", 404)
   }
   await prisma.concernMessage.delete({
-    where: {id}
+    where: { id }
   })
 }

@@ -38,6 +38,7 @@ enum ConcernStatus {
   approved
   rejected
   resolved
+  unresolved
 }
 
 enum Validation {
