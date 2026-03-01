@@ -62,8 +62,13 @@ model User {
   createAt        DateTime         @default(now())
   isVerified      Boolean          @default(false)
   isActive        Boolean          @default(true)
+  isOpen          Boolean          @default(false)
+  dailyPostCount  Int              @default(0)
+  lastPostReset   DateTime         @default(now())
   barangay        String?
-  createdAt       DateTime         @default(now())
+  isLocked        Boolean          @default(false)
+  unlockTime      DateTime?
+  loginAttempts   Int              @default(0)
   // ERD
   // Resident Side
   residentConcern Concern[]        @relation("ResidentReports")
@@ -78,9 +83,9 @@ model User {
   assignedTo        Concern[]      @relation("AssignedConcern")
 
   // Verification uploads (Resident side) 
-  verificationMedia Media?           @relation("UserVerificationMedia")
+  verificationMedia Media?  @relation("UserVerificationMedia")
   // Reviewed media (Admin side) 
-  reviewedMedia     Media[]          @relation("MediaReviewedBy")
+  reviewedMedia     Media[] @relation("MediaReviewedBy")
   //concernMessages   ConcernMessage[] @relation("UserConcernMessages")
 }
 
@@ -91,32 +96,34 @@ enum MediaType {
 }
 
 model Concern {
-  id                      Int              @id @default(autoincrement())
-  title                   String?
-  details                 String
-  location                String?
-  categoryId              Int?
+  id         Int     @id @default(autoincrement())
+  title      String?
+  details    String
+  location   String?
+  categoryId Int?
   // validation 
-  needsBarangayAssistance Boolean          @default(false)
-  isArchived              Boolean          @default(false)
+
+  isSpam                  Boolean         @default(false)
+  needsBarangayAssistance Boolean         @default(false)
+  isArchived              Boolean         @default(false)
   ArchivedById            Int?
-  ArchivedBy              User?            @relation("ArchivedConcern", fields: [ArchivedById], references: [id])
+  ArchivedBy              User?           @relation("ArchivedConcern", fields: [ArchivedById], references: [id])
   archivedOn              DateTime?
-  validation              Validation       @default(pending)
+  validation              Validation      @default(pending)
   validatedById           Int?
-  validatedBy             User?            @relation("ValidatedConcern", fields: [validatedById], references: [id])
+  validatedBy             User?           @relation("ValidatedConcern", fields: [validatedById], references: [id])
   validatedAt             DateTime?
   assinedToId             Int?
-  assignedTo              User?            @relation("AssignedConcern", fields: [assinedToId], references: [id])
+  assignedTo              User?           @relation("AssignedConcern", fields: [assinedToId], references: [id])
   media                   Media[]
-  category                Category?        @relation("ConcernCategory", fields: [categoryId], references: [id])
+  category                Category?       @relation("ConcernCategory", fields: [categoryId], references: [id])
   other                   String?
-  status                  ConcernStatus    @default(pending)
+  status                  ConcernStatus   @default(pending)
   userId                  Int
-  user                    User             @relation("ResidentReports", fields: [userId], references: [id])
-  updatedAt               DateTime?        @updatedAt
-  issuedAt                DateTime         @default(now())
-  updates                 ConcernUpdate[]  @relation("ConcernUpdates")
+  user                    User            @relation("ResidentReports", fields: [userId], references: [id])
+  updatedAt               DateTime?       @updatedAt
+  issuedAt                DateTime        @default(now())
+  updates                 ConcernUpdate[] @relation("ConcernUpdates")
   //concernMessages         ConcernMessage[] @relation("ConcernMessages")
 }
 
@@ -191,6 +198,7 @@ model Feedback {
   //Fields
   id               Int             @id @default(autoincrement())
   title            String
+  isSpam           Boolean         @default(false)
   issuedAt         DateTime        @default(now())
   updatedAt        DateTime?       @updatedAt
   //Relationships

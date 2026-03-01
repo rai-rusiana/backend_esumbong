@@ -1,18 +1,18 @@
 import * as feedbackService from "../../services/feedback.service.js";
 
 export const createFeedback = async (req, res) => {
-  const { title, feedback, media = [] } = req.body;
-
+  const { title, isSpam, feedback, media = [] } = req.body;
+  const spam = isSpam === "true" ? true : false
   if (!title || !feedback) {
     return res.status(400).json({
       error: "Title and Feedback fields are required",
     });
   }
-  
+
   const userId = req.user?.userId;
   try {
     await feedbackService.createFeedback(
-      { title, feedback, media },
+      { title, feedback, media, isSpam: spam },
       parseInt(userId)
     );
     return res.status(201).json({
@@ -64,7 +64,7 @@ export const updateFeedbackById = async (req, res) => {
     const updatedFeedback = await feedbackService.updateFeedbackById(
       Number(id),
       Number(userId),
-      { title, feedback } 
+      { title, feedback }
     );
 
     return res.status(200).json({

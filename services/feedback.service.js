@@ -10,6 +10,7 @@ export const createFeedback = async (data, userId) => {
             userId: userId,
             title: data.title,
             feedback: data.feedback,
+            isSpam: data.isSpam,
             media: {
                 create:
                     data.media?.map((m) => ({

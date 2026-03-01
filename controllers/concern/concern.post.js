@@ -8,9 +8,10 @@ export const createConcern = async (req, res) => {
     categoryId,
     other,
     location,
-    media
+    media,
+    isSpam
   } = req.body;
-
+  const spam = isSpam === "true" ? true : false
 
   /* ───────────── Validation ───────────── */
   if (!title || !details || !location) {
@@ -47,6 +48,7 @@ export const createConcern = async (req, res) => {
         details,
         needsBarangayAssistance: Boolean(needsBarangayAssistance),
         location,
+        isSpam: spam,
         other: other || null,
         media, // ✅ metadata array
       },

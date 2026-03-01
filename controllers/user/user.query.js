@@ -85,3 +85,19 @@ export const queryUsers = async (req, res) => {
     });
   }
 };
+
+export const getPostCount = async (req, res) => {
+  const userId = req.user.userId
+  try {
+    const response = await userService.getPostCount(Number(userId))
+    if (response.status === 429) {
+      return res.status(429).json({ error: "You have reached the daily post limit of 10. Try again tomorrow.", isAllowed: response.isAllowed })
+    }
+    return res.status(200).json(response)
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") console.log(error)
+    return res.status(500).json({
+      error: "An internal server error occured",
+    })
+  }
+}

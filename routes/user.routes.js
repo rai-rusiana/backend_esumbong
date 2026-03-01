@@ -44,6 +44,7 @@ router.patch("/verification/:userId",
   authorizeRole("admin"),
   userController.verifyUser
 )
+router.get("/checkPostCount", authenticateToken, userQuery.getPostCount)
 
 router.get("/me", authenticateToken, userQuery.getMe)
 

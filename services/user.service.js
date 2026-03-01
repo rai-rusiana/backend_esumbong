@@ -1,6 +1,6 @@
 import { AppError } from "../lib/error.js";
 import prisma from "../lib/prisma.js"
-
+import { getLockDuration } from "../lib/loginDuration.js"
 import { sendToUser } from "../lib/ws.js"
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -59,16 +59,83 @@ export const loginUser = async (email, password) => {
     console.log("Loging attempt", { email, password });
   }
   if (!user) {
-    throw new Error("User not found.")
+    throw new AppError("Invalid credentials.", 401)
   }
   if (user.isActive === false) {
-    throw new Error("You are restricted from using this account.")
+    throw new AppError("You are restricted from using this account.", 401)
   }
+  if (user.isLocked && user.unlockTime) {
+
+    if (process.env.NODE_ENV === "development") console.log("User already locked")
+    const now = new Date()
+
+    if (now >= user.unlockTime) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          isLocked: false,
+          unlockTime: null
+        }
+      })
+      user.isLocked = false
+      user.unlockTime = null
+    } else {
+      const secondsRemaining = Math.ceil(
+        (user.unlockTime.getTime() - now.getTime()) / 1000
+      )
+
+      return {
+        status: 423,
+
+        message: "Your account is locked.",
+        user: {
+          id: user.id,
+          email: user.email,
+          isLocked: true,
+          unlockTime: user.unlockTime,
+          secondsRemaining: secondsRemaining
+        }
+      }
+    }
+  }
+
   const passwordMatch = await bcrypt.compare(password, user.password);
   if (!passwordMatch) {
-    throw new Error("Incorrect password.")
+    const newAttempts = user.loginAttempts + 1
+    const shouldLock = newAttempts % 3 === 0;
+    let unlockTime = null
+    if (shouldLock) {
+      const lockDurationSeconds = getLockDuration(newAttempts)
+      if (lockDurationSeconds) {
+        unlockTime = new Date(Date.now() + lockDurationSeconds * 1000)
+      }
+    }
+    const try1 = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        loginAttempts: newAttempts,
+        isLocked: shouldLock,
+        unlockTime: unlockTime
+      }
+    })
+    if (shouldLock && unlockTime) {
+      const secondsRemaining = Math.ceil((unlockTime.getTime() - Date.now()) / 1000)
+      if (process.env.NODE_ENV === "development") console.log("Locking user", try1)
+      return {
+        status: 423,
+        message: "Your account is been locked.",
+        user: {
+          id: user.id,
+          email: user.email,
+          isLocked: true,
+          unlockTime: user.unlockTime,
+          secondsRemaining: secondsRemaining
+        }
+      }
+    }
+    throw new AppError("Incorrect password.", 401)
   }
-  console.log("give jwt")
+  if (process.env.NODE_ENV === "development") console.log("give jwt.")
   const access = jwt.sign(
     { userId: user.id, type: user.type, isVerified: user.isVerified }, // store 'type' to match middleware
     JWT_SECRET,
@@ -137,6 +204,7 @@ export const getAllUsers = async ({ search, type }) => {
  * @returns {Promise<object>} The user object without the password.
  */
 export const getUserById = async (id) => {
+  if (!id) return
   const user = await prisma.user.findUnique({
     where: { id },
     select: {
@@ -368,4 +436,45 @@ export const getStats = async () => {
     totalBarangayOfficials,
     totalConcerns,
   };
+};
+
+export const getPostCount = async (id) => {
+  if (!id) throw new AppError("No user id", 404);
+
+  // ✅ Fetch user FIRST before using it
+  const user = await prisma.user.findFirst({
+    where: { id },
+    select: {
+      dailyPostCount: true,
+      lastPostReset: true,
+    },
+  });
+
+  if (!user) throw new AppError("User not found", 404);
+
+  const now = new Date();
+  const lastReset = new Date(user.lastPostReset);
+
+  const isNewDay =
+    now.getDate() !== lastReset.getDate() ||
+    now.getMonth() !== lastReset.getMonth() ||
+    now.getFullYear() !== lastReset.getFullYear();
+
+  if (isNewDay) {
+    await prisma.user.update({
+      where: { id },
+      data: { dailyPostCount: 0, lastPostReset: now },
+    });
+    return { isSpam: false, isAllowed: true };
+  }
+
+  if (user.dailyPostCount >= 10) {
+    return { status: 429, isAllowed: false };
+  }
+
+  if (user.dailyPostCount >= 4) {
+    return { isSpam: true, isAllowed: true };
+  }
+
+  return { isSpam: false, isAllowed: true };
 };

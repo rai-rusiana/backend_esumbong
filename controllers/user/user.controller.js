@@ -62,6 +62,9 @@ export const loginUser = async (req, res) => {
 
   try {
     const user = await userService.loginUser(email, password);
+    if (user.status === 423) {
+      return res.status(423).json(user.user)
+    }
     if (!user) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
@@ -70,6 +73,9 @@ export const loginUser = async (req, res) => {
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.error("Error logging in user:", error);
+    }
+    if (error.name === "AppError") {
+      return res.status(error.status).json({ error: error.message })
     }
     if (error.message === "You are restricted from using this account.") {
       return res.status(403).json({ error: error.message })
@@ -198,7 +204,7 @@ export const sendVerify = async (req, res) => {
     size,
     type,
     isAI, } = req.body
-     if (process.env.NODE_ENV === "development") console.log(isAI)
+  if (process.env.NODE_ENV === "development") console.log(isAI)
   try {
     await userService.sendVerify(Number(userId), {
       url,
@@ -253,7 +259,7 @@ export const checkVerified = async (req, res) => {
 }
 
 export const getStats = async (req, res) => {
-  
+
   try {
     const data = await userService.getStats()
     return res.status(200).json({

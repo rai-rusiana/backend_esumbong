@@ -1,10 +1,15 @@
 import prisma from "../lib/prisma.js"
 import { AppError } from "../lib/error.js";
 import { sendConcernEmail } from "../lib/email.js";
+import { checkAndUpdatePostCount } from "../lib/checkPostLimit.js"
 import { sendToUser } from "../lib/ws.js"
 const baseUrl = process.env.FRONTEND_URL;
 
 export const createConcern = async (data, categoryId, userId) => {
+  const response = await checkAndUpdatePostCount(userId)
+  if (!response.allowed) {
+    throw new AppError(response.message, 429)
+  }
   const newConcern = await prisma.concern.create({
     data: {
       title: data.title,
@@ -14,6 +19,7 @@ export const createConcern = async (data, categoryId, userId) => {
       userId,
       ...(categoryId && { categoryId }),
       other: data.other ?? null,
+      isSpam: data.isSpam ?? false,
       media: {
         create:
           data.media?.map((m) => ({
