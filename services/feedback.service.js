@@ -109,7 +109,7 @@ export const getFeedbackById = async (id, userId) => {
     throw new AppError("Not allowed.", 400)
 }
 
-export const getFeedbackByUserOrAll = async (me, userId = 0) => {
+export const getFeedbackByUserOrAll = async (me, userId = 0, spam) => {
     if (me === "true") {
         return await prisma.feedback.findMany({
             where: {
@@ -127,14 +127,19 @@ export const getFeedbackByUserOrAll = async (me, userId = 0) => {
             }
         })
     }
-
+    console.log(spam)
     return await prisma.feedback.findMany({
+        ...(spam !== undefined && {
+            where: {
+                isSpam: spam
+            }
+        }),
         orderBy: {
             issuedAt: 'desc'
-
         },
         select: {
             id: true,
+            isSpam: true,
             title: true,
             issuedAt: true,
         },

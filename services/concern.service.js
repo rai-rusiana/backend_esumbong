@@ -194,7 +194,7 @@ export const getConcernById = async (concernId) => {
   });
   return concern;
 };
-export const getAllConcerns = async ({ search, status, archived, validation, recent }) => {
+export const getAllConcerns = async ({ search, status, archived, validation, recent, spam }) => {
   return prisma.concern.findMany({
     where: {
       AND: [
@@ -236,11 +236,15 @@ export const getAllConcerns = async ({ search, status, archived, validation, rec
         validation !== undefined ? {
           validation: validation
         } : {},
+        spam !== undefined ? {
+          isSpam: spam
+        } : {}
       ],
     },
     select: {
       id: true,
       validation: true,
+      isSpam: true,
       validatedBy: {
         select: {
           id: true,

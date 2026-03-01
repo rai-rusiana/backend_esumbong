@@ -59,12 +59,19 @@ export const getConcernUpdatesById = async (req, res) => {
 }
 
 export const getAllConcern = async (req, res) => {
-  const { search, status, archived, validation, recent } = req.query
+  const { search, status, archived, validation, recent, spam } = req.query
   const recentFilter = recent === "true" ? true : recent === "false" ? false : undefined
   const archivedFilter = archived === "true" ? true : archived === "false" ? false : undefined
   const validationFilter = validation === "true" ? true : validation === "false" ? false : undefined
+  const isSpam = spam === "true" ? true : spam === "false" ? false : undefined
   try {
-    const concerns = await concernService.getAllConcerns({ search, status, archived: archivedFilter, validation: validationFilter, recent: recentFilter })
+    const concerns = await concernService.getAllConcerns({
+      search, status,
+      archived: archivedFilter,
+      validation: validationFilter,
+      recent: recentFilter,
+      spam: isSpam
+    })
     return res.status(200).json({
       data: concerns
     })

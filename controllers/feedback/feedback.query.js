@@ -2,14 +2,14 @@
 import * as feedbackService from "../../services/feedback.service.js"
 
 export const getFeedbackByUserOrAll = async (req, res) => {
-    const { me } = req.query
+    const { me, spam } = req.query
     let userId;
+    const isSpam = spam === "true" ? true : spam === "false" ? false : undefined
     if (me === "true") {
         userId = Number(req.user?.userId)
     }
     try {
-        const feedbacks = await feedbackService.getFeedbackByUserOrAll(me, userId)
-        console.log("Feedbacks", feedbacks)
+        const feedbacks = await feedbackService.getFeedbackByUserOrAll(me, userId, isSpam)
         return res.status(200).json(feedbacks)
     } catch (error) {
         if (process.env.NODE_ENV === "development") {
