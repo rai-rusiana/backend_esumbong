@@ -2,9 +2,14 @@ import { AppError } from "../lib/error.js";
 import prisma from "../lib/prisma.js"
 const baseUrl = process.env.FRONTEND_URL;
 import { UserType } from "@prisma/client";
-
+import { checkAndUpdatePostCount } from "../lib/checkPostLimit.js"
+import { sendToUser } from "../lib/ws.js";
 
 export const createFeedback = async (data, userId) => {
+    const response = await checkAndUpdatePostCount(userId)
+    if (!response.allowed) {
+        throw new AppError(response.message, 429)
+    }
     const newFeedback = await prisma.feedback.create({
         data: {
             userId: userId,
