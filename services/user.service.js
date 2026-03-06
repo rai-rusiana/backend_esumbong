@@ -83,7 +83,7 @@ export const loginUser = async (email, password) => {
       const secondsRemaining = Math.ceil(
         (user.unlockTime.getTime() - now.getTime()) / 1000
       )
-
+      console.log(user.unlockTime, secondsRemaining)
       return {
         status: 423,
 
@@ -120,7 +120,7 @@ export const loginUser = async (email, password) => {
     })
     if (shouldLock && unlockTime) {
       const secondsRemaining = Math.ceil((unlockTime.getTime() - Date.now()) / 1000)
-      if (process.env.NODE_ENV === "development") console.log("Locking user", try1)
+      if (process.env.NODE_ENV === "development") console.log("Locking user", unlockTime)
       return {
         status: 423,
         message: "Your account is been locked.",
@@ -141,7 +141,10 @@ export const loginUser = async (email, password) => {
     JWT_SECRET,
     { expiresIn: "15m" }
   );
-
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { loginAttempts: 0, }
+  })
   const refresh = jwt.sign({ userId: user.id }, REFRESH_SECRET, { expiresIn: "7d" });
 
   const { password: _, ...userWithoutPassword } = user;

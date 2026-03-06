@@ -20,6 +20,7 @@ export const createConcern = async (data, categoryId, userId) => {
       ...(categoryId && { categoryId }),
       other: data.other ?? null,
       isSpam: data.isSpam ?? false,
+      isAnonymous: data.isAnonymous ?? false,
       media: {
         create:
           data.media?.map((m) => ({
@@ -109,6 +110,7 @@ export const updateStatusConcern = async (userId, concernId, data) => {
       status: data.status,
     },
   });
+  console.log(data)
   const url = `${baseUrl}/concern/${updatedConcern.id}`;
   const updateMessage =
     data.updateMessage ||
@@ -145,6 +147,21 @@ export const updateStatusConcern = async (userId, concernId, data) => {
       updateMessage: updateMessage,
       concernId: concernId,
       status: data.status,
+      media: {
+        create:
+          data.media?.map((m) => ({
+            url: m.url,
+            name: m.name ?? null,
+            fileSize: m.size ?? null,
+            fileType: m.type ?? null,
+            isAI: m.isAI ?? false,
+            type: m.type?.startsWith("image")
+              ? "photo"
+              : m.type?.startsWith("video")
+                ? "video"
+                : "file",
+          })) || [],
+      },
     },
   });
   return concernUpdate;
@@ -186,6 +203,7 @@ export const getConcernById = async (concernId) => {
       other: true,
       status: true,
       validation: true,
+      isAnonymous: true,
       details: true,
       issuedAt: true,
       needsBarangayAssistance: true,
@@ -194,7 +212,7 @@ export const getConcernById = async (concernId) => {
   });
   return concern;
 };
-export const getAllConcerns = async ({ search, status, archived, validation, recent, spam }) => {
+export const getAllConcerns = async ({ search, status, archived, validation, recent, spam, isAnonymous }) => {
   return prisma.concern.findMany({
     where: {
       AND: [
@@ -238,6 +256,9 @@ export const getAllConcerns = async ({ search, status, archived, validation, rec
         } : {},
         spam !== undefined ? {
           isSpam: spam
+        } : {},
+        isAnonymous !== undefined ? {
+          isAnonymous: isAnonymous
         } : {}
       ],
     },
@@ -328,14 +349,29 @@ export const getConcernUpdates = async (concernId) => {
   });
 };
 
-export const validateConcern = async (concernId, action, userId, resolve) => {
+export const validateConcern = async (concernId, data, userId, resolve) => {
   const now = new Date();
-
+  console.log("Media ",data.media)
   // 1️⃣ Update the concern with validation info
   await prisma.concernUpdate.create({
     data: {
-      updateMessage: `Concern has been ${action} by the barangay official.`,
-      status: action,
+      updateMessage: data.updateMessage || `Concern has been ${data.validation} by the barangay official.`,
+      status: data.validation,
+      media: {
+        create:
+          data.media?.map((m) => ({
+            url: m.url,
+            name: m.name ?? null,
+            fileSize: m.size ?? null,
+            fileType: m.type ?? null,
+            isAI: m.isAI ?? false,
+            type: m.type?.startsWith("image")
+              ? "photo"
+              : m.type?.startsWith("video")
+                ? "video"
+                : "file",
+          })) || [],
+      },
       concernId
     }
   })
@@ -354,7 +390,7 @@ export const validateConcern = async (concernId, action, userId, resolve) => {
     updatedConcern = await prisma.concern.update({
       where: { id: concernId },
       data: {
-        validation: action,
+        validation: data.validation,
         validatedById: userId,
         validatedAt: now,
         status: "inProgress"
@@ -365,9 +401,8 @@ export const validateConcern = async (concernId, action, userId, resolve) => {
     });
   }
 
-
   const url = `${baseUrl}/concern/${updatedConcern.id}`;
-  const message = `Your concern "${updatedConcern.title}" has been ${action}.`;
+  const message = `Your concern "${updatedConcern.title}" has been ${data.validation}.`;
 
   // 2️⃣ Notify the resident
   await prisma.notification.create({
@@ -393,7 +428,7 @@ export const validateConcern = async (concernId, action, userId, resolve) => {
       updatedConcern.user.email,  // to
       updatedConcern.user.fullname, // fullname
       updatedConcern.title,        // title
-      action,                      // action (e.g., "approved", "rejected")
+      data.validation,             
       updatedConcern.details,      // details
       url                           // link to concern
     );
@@ -412,7 +447,7 @@ export const validateConcern = async (concernId, action, userId, resolve) => {
         data: {
           url,
           itemId: updatedConcern.id,
-          message: `${updatedConcern.user.fullname}'s concern has been ${action}.`,
+          message: `${updatedConcern.user.fullname}'s concern has been ${data.validation}.`,
           type: "concern",
           userId: official.id,
         },
@@ -422,7 +457,7 @@ export const validateConcern = async (concernId, action, userId, resolve) => {
           official.email,             // to
           official.fullname,          // fullname
           updatedConcern.title,       // title
-          action,                     // action (e.g., "approved", "rejected")
+          data.validation,          
           updatedConcern.details,     // details
           url                         // link to concern
         );
@@ -458,6 +493,9 @@ export const getConcernUpdatesById = async (concernId) => {
   return await prisma.concernUpdate.findMany({
     where: {
       concernId
+    },
+    include: {
+      media: true,
     }
   })
 }
@@ -559,6 +597,8 @@ export const getUpdatedConcerns = async (userId) => {
       concernId: true,
       createdAt: true,
       status: true,
+      updateMessage: true,
+      media: true,
       concern: {
         select: {
           title: true,
@@ -572,7 +612,7 @@ export const getUpdatedConcerns = async (userId) => {
       }
     }
   })
-  console.log("Concern histories fetched:", concernHistories)
+  if (process.env.NODE_ENV === "development") console.log("Concern histories fetched:", concernHistories)
   return concernHistories;
 }
 

@@ -44,6 +44,7 @@ export const getConcernUpdatesById = async (req, res) => {
   const { id } = req.params
   try {
     const updates = await concernService.getConcernUpdatesById(parseInt(id))
+    console.log("getting concern updates",updates)
     return res.status(200).json({
       data: updates,
       message: "concern updates fetched successfully"

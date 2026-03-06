@@ -96,13 +96,13 @@ enum MediaType {
 }
 
 model Concern {
-  id         Int     @id @default(autoincrement())
-  title      String?
-  details    String
-  location   String?
-  categoryId Int?
+  id                      Int             @id @default(autoincrement())
+  title                   String?
+  details                 String
+  location                String?
+  categoryId              Int?
   // validation 
-
+  isAnonymous             Boolean         @default(false)
   isSpam                  Boolean         @default(false)
   needsBarangayAssistance Boolean         @default(false)
   isArchived              Boolean         @default(false)
@@ -143,6 +143,7 @@ model Concern {
 model ConcernUpdate {
   id            Int           @id @default(autoincrement())
   updateMessage String
+  media         Media[]
   status        ConcernStatus
   createdAt     DateTime      @default(now())
   concernId     Int
@@ -173,6 +174,8 @@ model Media {
   //concernMessages    ConcernMessage?     @relation("ConcernMessagesMedia", fields: [concernMessagesId], references: [id])
   feedbackId         Int?
   feedback           Feedback?           @relation(fields: [feedbackId], references: [id])
+  concernUpdate      ConcernUpdate?      @relation(fields: [concernUpdateId], references: [id])
+  concernUpdateId    Int?
 }
 
 enum VerificationStatus {

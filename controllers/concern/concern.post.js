@@ -9,10 +9,12 @@ export const createConcern = async (req, res) => {
     other,
     location,
     media,
-    isSpam
+    isSpam,
+    isAnonymous
   } = req.body;
   const spam = isSpam === "true" ? true : false
 
+  const anonymous = isAnonymous === "true" ? true : false
   /* ───────────── Validation ───────────── */
   if (!title || !details || !location) {
     return res.status(400).json({
@@ -49,6 +51,7 @@ export const createConcern = async (req, res) => {
         needsBarangayAssistance: Boolean(needsBarangayAssistance),
         location,
         isSpam: spam,
+        isAnonymous: anonymous,
         other: other || null,
         media, // ✅ metadata array
       },
@@ -72,7 +75,7 @@ export const createConcern = async (req, res) => {
 export const updateConcernStatus = async (req, res) => {
 
   const { concernId } = req.params
-  const { status, updateMessage } = req.body
+  const { status, updateMessage, media } = req.body
   const userId = req.user?.userId
   if (!status) {
     return res.status(400).json({
@@ -83,7 +86,7 @@ export const updateConcernStatus = async (req, res) => {
     await concernService.updateStatusConcern(
       parseInt(userId),
       parseInt(concernId),
-      { status, updateMessage }
+      { status, updateMessage: updateMessage, media }
     )
     return res.status(200).json({
       message: "Concern status has been updated."
@@ -101,12 +104,12 @@ export const updateConcernStatus = async (req, res) => {
 
 export const validateConcern = async (req, res) => {
   const { id } = req.params;
-  const { validation } = req.body
+  const { validation, media, updateMessage } = req.body
   const { type } = req.query
   const userId = req.user?.userId
 
   try {
-    await concernService.validateConcern(parseInt(id), validation, parseInt(userId), type);
+    await concernService.validateConcern(parseInt(id), {validation, updateMessage, media}, parseInt(userId), type);
     return res.status(200).json({ message: "Successfully validated the concern" })
 
   } catch (error) {
