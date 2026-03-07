@@ -14,7 +14,6 @@ export const createConcern = async (req, res) => {
   } = req.body;
   const spam = isSpam === "true" ? true : false
 
-  const anonymous = isAnonymous === "true" ? true : false
   /* ───────────── Validation ───────────── */
   if (!title || !details || !location) {
     return res.status(400).json({
@@ -51,7 +50,7 @@ export const createConcern = async (req, res) => {
         needsBarangayAssistance: Boolean(needsBarangayAssistance),
         location,
         isSpam: spam,
-        isAnonymous: anonymous,
+        isAnonymous: Boolean(isAnonymous),
         other: other || null,
         media, // ✅ metadata array
       },

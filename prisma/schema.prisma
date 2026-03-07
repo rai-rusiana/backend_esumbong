@@ -197,6 +197,13 @@ model Category {
   Concern     Concern[] @relation("ConcernCategory")
 }
 
+model FeedbackCategory {
+  id          Int        @id @default(autoincrement())
+  description String?
+  name        String
+  feedback    Feedback[] @relation("feedbackCategory")
+}
+
 model Feedback {
   //Fields
   id               Int             @id @default(autoincrement())
@@ -204,6 +211,9 @@ model Feedback {
   isSpam           Boolean         @default(false)
   issuedAt         DateTime        @default(now())
   updatedAt        DateTime?       @updatedAt
+  categoryId              Int?
+  category         FeedbackCategory?       @relation("feedbackCategory", fields: [categoryId], references: [id])
+  other            String?
   //Relationships
   userId           Int
   user             User            @relation("UserFeedbacks", fields: [userId], references: [id])
