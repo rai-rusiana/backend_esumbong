@@ -16,6 +16,8 @@ export const createFeedback = async (data, userId) => {
             title: data.title,
             feedback: data.feedback,
             isSpam: data.isSpam,
+            ...(data.categoryId && { categoryId: Number(data.categoryId) }),
+            other: data.other ?? null,
             media: {
                 create:
                     data.media?.map((m) => ({
@@ -38,7 +40,6 @@ export const createFeedback = async (data, userId) => {
     })
     const url = `${baseUrl}/feedback/${newFeedback.id}`;
     const message = `${newFeedback.user.fullname} has a feedback.`;
-    console.log("finding users")
     const users = await prisma.user.findMany({
         where: {
             type: {
@@ -127,7 +128,6 @@ export const getFeedbackByUserOrAll = async (me, userId = 0, spam) => {
             }
         })
     }
-    console.log(spam)
     return await prisma.feedback.findMany({
         ...(spam !== undefined && {
             where: {

@@ -54,7 +54,7 @@ export const loginUser = async (email, password) => {
   password = password.trim();
   console.log("Login service")
   const user = await prisma.user.findUnique({ where: { email } });
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV === "development") {
     console.log("User found:", user);
     console.log("Loging attempt", { email, password });
   }
@@ -83,7 +83,6 @@ export const loginUser = async (email, password) => {
       const secondsRemaining = Math.ceil(
         (user.unlockTime.getTime() - now.getTime()) / 1000
       )
-      console.log(user.unlockTime, secondsRemaining)
       return {
         status: 423,
 

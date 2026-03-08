@@ -2,7 +2,7 @@ import * as CategoryService from "../../services/category.service.js";
 
 export const createCategoryController = async (req, res) => {
   try {
-    const { description, name } = req.body;
+    const { description, name, type, } = req.body;
 
 
     if (!description || !name) {
@@ -11,7 +11,7 @@ export const createCategoryController = async (req, res) => {
       });
     }
 
-    const newCategory = await CategoryService.createCategory({ description, name });
+    const newCategory = await CategoryService.createCategory({ description, name, type });
     return res.status(201).json(newCategory);
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
@@ -44,14 +44,14 @@ export const deleteCategoryController = async (req, res) => {
 export const updateCategoryController = async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, name } = req.body;
+    const { description, name, type } = req.body;
 
-    if (!description && !name) {
+    if (!description && !name && !type) {
       return res.status(400).json({
-        error: "At least one of 'name' or 'description' is required.",
+        error: "At least one of 'name' or 'description' or 'type' is required.",
       });
     }
-    const updated = await CategoryService.updateCategory(Number(id), { description, name });
+    const updated = await CategoryService.updateCategory(Number(id), { description, name, type });
     return res.status(200).json(updated);
   } catch (error) {
     if (process.env.NODE_ENV === "development") {

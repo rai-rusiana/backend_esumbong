@@ -14,7 +14,6 @@ export const createUser = async (req, res) => {
     });
   }
   try {
-    console.log("Age:", age)
     const newUser = await userService.createUser({
       email,
       password,
@@ -227,7 +226,6 @@ export const sendVerify = async (req, res) => {
 export const verifyUser = async (req, res) => {
   const adminId = req.user.userId
   const { userId } = req.params
-  console.log(req.body)
   const { verificationStatus } = req.body
   try {
     await userService.verifyUser(Number(userId), Number(adminId), verificationStatus)

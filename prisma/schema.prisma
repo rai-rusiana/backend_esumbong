@@ -191,17 +191,18 @@ enum MediaFor {
 }
 
 model Category {
-  id          Int       @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   description String?
   name        String
-  Concern     Concern[] @relation("ConcernCategory")
+  type        CategoryType @default(concern)
+  Concern     Concern[]    @relation("ConcernCategory")
+  feedback    Feedback[]   @relation("feedbackCategory")
+  createdAt   DateTime     @default(now())
 }
 
-model FeedbackCategory {
-  id          Int        @id @default(autoincrement())
-  description String?
-  name        String
-  feedback    Feedback[] @relation("feedbackCategory")
+enum CategoryType {
+  concern
+  feedback
 }
 
 model Feedback {
@@ -211,8 +212,9 @@ model Feedback {
   isSpam           Boolean         @default(false)
   issuedAt         DateTime        @default(now())
   updatedAt        DateTime?       @updatedAt
-  categoryId              Int?
-  category         FeedbackCategory?       @relation("feedbackCategory", fields: [categoryId], references: [id])
+  star             Float?
+  categoryId       Int?
+  category         Category?       @relation("feedbackCategory", fields: [categoryId], references: [id])
   other            String?
   //Relationships
   userId           Int

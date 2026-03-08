@@ -5,6 +5,7 @@ export const createCategory = async (category) => {
     data: {
       name: category.name,
       description: category.description,
+      type: category.type
     }
   });
 };
@@ -26,12 +27,17 @@ export const deleteCategory = async (id) => {
   });
 };
 
-export const getAllCategory = async () => {
+export const getAllCategory = async (type) => {
   return await prisma.category.findMany({
+    where: type ? { type: type}: {},
     select: {
       id: true,
       name: true,
+      type: true,
       description: true,
     },
+    orderBy: {
+      createdAt: 'desc'
+    }
   });
 };

@@ -1,7 +1,7 @@
 import * as feedbackService from "../../services/feedback.service.js";
 
 export const createFeedback = async (req, res) => {
-  const { title, isSpam, feedback, media = [] } = req.body;
+  const { title, isSpam, feedback, media = [], categoryId, other } = req.body;
   const spam = isSpam === "true" ? true : false
   if (!title || !feedback) {
     return res.status(400).json({
@@ -11,10 +11,11 @@ export const createFeedback = async (req, res) => {
 
   const userId = req.user?.userId;
   try {
-    await feedbackService.createFeedback(
-      { title, feedback, media, isSpam: spam },
+    const feedbackCreation = await feedbackService.createFeedback(
+      { title, feedback, media, isSpam: spam, categoryId, other },
       parseInt(userId)
     );
+    console.log(feedbackCreation)
     return res.status(201).json({
       message: "Your feedback has been filed.",
     });

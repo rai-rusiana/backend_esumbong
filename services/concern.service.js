@@ -110,7 +110,6 @@ export const updateStatusConcern = async (userId, concernId, data) => {
       status: data.status,
     },
   });
-  console.log(data)
   const url = `${baseUrl}/concern/${updatedConcern.id}`;
   const updateMessage =
     data.updateMessage ||
@@ -351,7 +350,6 @@ export const getConcernUpdates = async (concernId) => {
 
 export const validateConcern = async (concernId, data, userId, resolve) => {
   const now = new Date();
-  console.log("Media ",data.media)
   // 1️⃣ Update the concern with validation info
   await prisma.concernUpdate.create({
     data: {

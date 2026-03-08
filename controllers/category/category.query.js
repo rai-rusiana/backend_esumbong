@@ -1,9 +1,9 @@
 import * as CategoryService from "../../services/category.service.js";
 
-export const getAllCategoryController = async (_, res) => {
-
+export const getAllCategoryController = async (req, res) => {
+  const { type } = req.query
   try {
-    const allCategory = await CategoryService.getAllCategory();
+    const allCategory = await CategoryService.getAllCategory(type);
 
     return res.status(200).json(allCategory);
   } catch (error) {

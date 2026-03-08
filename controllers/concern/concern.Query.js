@@ -44,7 +44,6 @@ export const getConcernUpdatesById = async (req, res) => {
   const { id } = req.params
   try {
     const updates = await concernService.getConcernUpdatesById(parseInt(id))
-    console.log("getting concern updates",updates)
     return res.status(200).json({
       data: updates,
       message: "concern updates fetched successfully"
@@ -109,7 +108,6 @@ export const getConcernsByUserId = async (req, res) => {
 }
 
 export const getConcernHistory = async (req, res) => {
-  console.log("Getting concern history for user:", req.user)
   const userId = Number(req.user?.userId)
   try {
     const history = await concernService.getUpdatedConcerns(userId)
