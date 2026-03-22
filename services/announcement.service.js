@@ -72,45 +72,79 @@ export const deleteAnnouncement = async (id) => {
     })
 }
 export const getAnnouncementById = async (id, userId) => {
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { type: true }
-    })
-    if (!user) throw new Error("User not found");
+
+    let user;
+    if (userId) {
+        user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { type: true }
+        })
+        if (!user) throw new Error("User not found");
+    }
     const announcement = await prisma.announcement.findUnique({
         where: { id }
     })
     if (!announcement) {
         throw new AppError("Announcement not found", 404);
     }
-    if (
-        (user.type === "resident" && !announcement.notifyResidents) ||
-        (user.type === "official" && !announcement.notifyOfficials)
-    ) {
-        throw new AppError("Announcement not accessible by this user", 403)
+    if (user) {
+        if (
+            (user.type === "resident" && !announcement.notifyResidents) ||
+            (user.type === "official" && !announcement.notifyOfficials)
+        ) {
+            throw new AppError("Announcement not accessible by this user", 403)
+        }
+    } else  {
+        if (!announcement.notifyResidents) throw new AppError("Announcement not accessibler", 403)
     }
+
     return announcement
 }
 
-export const getAllAnnouncements = async (userId, sidebar = false) => {
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { type: true },
-    });
+export const getAllAnnouncements = async (userId, sidebar = false, cursor, take = 10) => {
+    let whereClause;
+    if (userId) {
+        const user = await prisma.user.findUnique({
+
+            where: { id: userId },
+            select: { type: true },
+        });
 
 
-    if (!user) throw new Error("User not found");
+        if (!user) throw new Error("User not found");
 
-    const whereClause = user.type === "resident"
-        ? { notifyResidents: true }
-        : { notifyOfficials: true };
+        whereClause = user.type === "resident"
+            ? { notifyResidents: true }
+            : { notifyOfficials: true };
+    } {
+        whereClause = { notifyResidents: true }
+    }
 
 
-    const announcements = await prisma.announcement.findMany({
+    const results = await prisma.announcement.findMany({
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        take: sidebar ? 5 : take + 1,
         orderBy: { createdAt: "desc" },
-        take: sidebar ? 5 : undefined,
         where: whereClause,
     });
+    const hasNextPage = results.length > take;
+    const data = hasNextPage ? results.slice(0, take) : results;
+    const nextCursor = hasNextPage ? data[data.length - 1].id : null;
 
-    return announcements;
+    return { data, nextCursor, hasNextPage };
+};
+
+export const getDashboardAnnouncements = async (cursor, take = 8) => {
+
+    const results = await prisma.announcement.findMany({
+        take: take + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        orderBy: { createdAt: "desc" },
+        where: { notifyResidents: true },
+    });
+    const hasNextPage = results.length > take;
+    const data = hasNextPage ? results.slice(0, take) : results;
+    const nextCursor = hasNextPage ? data[data.length - 1].id : null;
+
+    return { data, nextCursor, hasNextPage };
 };

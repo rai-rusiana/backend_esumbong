@@ -10,6 +10,7 @@ router.post("/", authenticateToken, authorizeRole("resident"),
     feedbackPostController.createFeedback
 )
 
+router.get("/public", feedbackGetController.getPublicFeedbacks)
 
 router.get("/", authenticateToken, feedbackGetController.getFeedbackByUserOrAll)
 

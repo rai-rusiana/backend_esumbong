@@ -1,17 +1,20 @@
-
 import { Router } from "express";
 
 const router = new Router();
 
 import * as concernPost from "../controllers/concern/concern.post.js";
 import * as concernQuery from "../controllers/concern/concern.Query.js";
+import * as concernPublic from "../controllers/concern/concern.public.js";
 import {
   authenticateToken,
   authorizeRole,
-  authorizeUser,
 } from "../middleware/auth.middleware.js";
 
+// ─── PUBLIC routes (no auth) — must be defined BEFORE /:id ───────────────────
+router.get("/public/sample", concernPublic.getPublicSampleConcerns)
+router.get("/public/:id", concernPublic.getPublicConcernById)
 
+// ─── Protected routes ────────────────────────────────────────────────────────
 router.patch("/archive/:id",
   authenticateToken,
   authorizeRole("barangay_official"),
@@ -27,7 +30,8 @@ router.get("/updates/:id",
   authenticateToken,
   concernQuery.getConcernUpdatesById
 )
-router.get("/stats", authenticateToken,
+router.get("/stats",
+  authenticateToken,
   concernQuery.getConcernStats
 )
 router.get("/history",
@@ -35,24 +39,12 @@ router.get("/history",
   concernQuery.getConcernHistory
 )
 
-//router.post("/message/:id", 
-//  authenticateToken,
-//  concernPost.userConcernMessage
-//)
-
-//router.delete("/message/:id", 
-//  authenticateToken,
-//  concernPost.deleteConcernMessage
-//)
-
 router.post(
   "/",
   authenticateToken,
   authorizeRole("resident"),
   concernPost.createConcern
 );
-
-
 
 router.get("/",
   authenticateToken,
@@ -73,6 +65,9 @@ router.delete(
   concernPost.deleteConcern
 )
 
-router.get("/user/:id", authenticateToken,
-  concernQuery.getConcernsByUserId)
+router.get("/user/:id",
+  authenticateToken,
+  concernQuery.getConcernsByUserId
+)
+
 export default router;

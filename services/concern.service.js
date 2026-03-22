@@ -211,73 +211,48 @@ export const getConcernById = async (concernId) => {
   });
   return concern;
 };
-export const getAllConcerns = async ({ search, status, archived, validation, recent, spam, isAnonymous }) => {
-  return prisma.concern.findMany({
+export const getAllConcerns = async ({ search, status, archived, validation, recent, spam, isAnonymous, cursor, take = 20 }) => {
+  const results = await prisma.concern.findMany({
+    take: recent ? 5 : take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     where: {
       AND: [
-        // 🔹 Validation filter
-        ["approved", "pending", "rejected"].includes(status)
-          ? { validation: status }
-          : {},
-
-        // 🔹 Status filter
-        ["assigned", "resolved", "validated"].includes(status)
-          ? { status }
-          : {},
-
-        // 🔹 Recent filter
+        ["approved", "pending", "rejected"].includes(status) ? { validation: status } : {},
+        ["assigned", "resolved", "validated"].includes(status) ? { status } : {},
         recent !== undefined ? { updatedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } : {},
-
-        // 🔹 Search filter
-        search
-          ? {
-            OR: [
-              { title: { contains: search, mode: "insensitive" } },
-              { details: { contains: search, mode: "insensitive" } },
-              {
-                user: {
-                  fullname: { contains: search, mode: "insensitive" },
-                },
-              },
-              {
-                category: {
-                  name: { contains: search, mode: "insensitive" },
-                },
-              },
-            ],
-          }
-          : {},
-        archived !== undefined ? {
-          isArchived: archived
+        search ? {
+          OR: [
+            { title: { contains: search, mode: "insensitive" } },
+            { details: { contains: search, mode: "insensitive" } },
+            { user: { fullname: { contains: search, mode: "insensitive" } } },
+            { category: { name: { contains: search, mode: "insensitive" } } },
+          ],
         } : {},
-        validation !== undefined ? {
-          validation: validation
-        } : {},
-        spam !== undefined ? {
-          isSpam: spam
-        } : {},
-        isAnonymous !== undefined ? {
-          isAnonymous: isAnonymous
-        } : {}
+        archived !== undefined ? { isArchived: archived } : {},
+        validation !== undefined ? { validation } : {},
+        spam !== undefined ? { isSpam: spam } : {},
+        isAnonymous !== undefined ? { isAnonymous } : {},
       ],
     },
     select: {
       id: true,
+      title: true,
+      details: true,
       validation: true,
       isSpam: true,
+      isArchived: true,
+      archivedOn: true,
+      issuedAt: true,
+      updatedAt: true,
+      status: true,
+      needsBarangayAssistance: true,
+      other: true,
       validatedBy: {
         select: {
           id: true,
           fullname: true,
         },
       },
-      archivedOn: true,
-      issuedAt: true,
-      title: true,
-      details: true,
-      status: true,
-      isArchived: true,
-      needsBarangayAssistance: true,
       user: {
         select: {
           id: true,
@@ -290,12 +265,15 @@ export const getAllConcerns = async ({ search, status, archived, validation, rec
           name: true,
         },
       },
-      other: true,
     },
-    orderBy: {
-      issuedAt: "desc",
-    },
+    orderBy: { issuedAt: "desc" },
   });
+
+  const hasNextPage = results.length > take;
+  const data = hasNextPage ? results.slice(0, take) : results;
+  const nextCursor = hasNextPage ? data[data.length - 1].id : null;
+
+  return { data, nextCursor, hasNextPage };
 };
 
 export const getConcernStats = async (userId, isOfficial) => {
@@ -321,7 +299,7 @@ export const getConcernStats = async (userId, isOfficial) => {
   return stats
 }
 
-export const getResidentConcerns = async (userId) => {
+export const getResidentConcerns = async (userId, cursor, take = 20) => {
   const user = await prisma.user.findFirst({
     where: {
       id: userId
@@ -330,7 +308,10 @@ export const getResidentConcerns = async (userId) => {
   if (!user) {
     throw new AppError("User not found", 404);
   }
-  return await prisma.concern.findMany({
+  const results = await prisma.concern.findMany({
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+
     where: {
       userId: userId,
     },
@@ -338,6 +319,12 @@ export const getResidentConcerns = async (userId) => {
       updatedAt: 'desc'
     }
   });
+
+  const hasNextPage = results.length > take;
+  const data = hasNextPage ? results.slice(0, take) : results;
+  const nextCursor = hasNextPage ? data[data.length - 1].id : null;
+
+  return { data, nextCursor, hasNextPage };
 };
 
 export const getConcernUpdates = async (concernId) => {
@@ -426,7 +413,7 @@ export const validateConcern = async (concernId, data, userId, resolve) => {
       updatedConcern.user.email,  // to
       updatedConcern.user.fullname, // fullname
       updatedConcern.title,        // title
-      data.validation,             
+      data.validation,
       updatedConcern.details,      // details
       url                           // link to concern
     );
@@ -455,7 +442,7 @@ export const validateConcern = async (concernId, data, userId, resolve) => {
           official.email,             // to
           official.fullname,          // fullname
           updatedConcern.title,       // title
-          data.validation,          
+          data.validation,
           updatedConcern.details,     // details
           url                         // link to concern
         );
@@ -570,8 +557,7 @@ export const deleteConcern = async (concernId, userId) => {
   return
 }
 
-
-export const getUpdatedConcerns = async (userId) => {
+export const getUpdatedConcerns = async (userId, cursor, take = 20) => {
 
   const user = await prisma.user.findFirst({
     where: {
@@ -585,13 +571,16 @@ export const getUpdatedConcerns = async (userId) => {
     throw new AppError("User not found", 404);
   }
   const id = user.id;
-  const concernHistories = await prisma.concernUpdate.findMany({
+  const results = await prisma.concernUpdate.findMany({
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     where: {
       concern: {
         userId: id,
       }
     },
     select: {
+      id: true,
       concernId: true,
       createdAt: true,
       status: true,
@@ -610,8 +599,14 @@ export const getUpdatedConcerns = async (userId) => {
       }
     }
   })
-  if (process.env.NODE_ENV === "development") console.log("Concern histories fetched:", concernHistories)
-  return concernHistories;
+  if (process.env.NODE_ENV === "development") console.log("Concern histories fetched:", results)
+
+
+  const hasNextPage = results.length > take;
+  const data = hasNextPage ? results.slice(0, take) : results;
+  const nextCursor = hasNextPage ? data[data.length - 1].id : null;
+
+  return { data, nextCursor, hasNextPage };
 }
 
 export const userConcernMessage = async (userId, concernId, data) => {
@@ -653,4 +648,102 @@ export const deleteConcernMessage = async (id) => {
   await prisma.concernMessage.delete({
     where: { id }
   })
+}
+
+
+/**
+ * Returns exactly 1 concern per status group: pending, inProgress, resolved.
+ * Skips any concern marked as isAnonymous.
+ */
+export const getPublicSampleConcerns = async () => {
+  const statuses = ["pending", "inProgress", "resolved"]
+
+  const results = await Promise.all(
+    statuses.map((status) =>
+      prisma.concern.findFirst({
+        where: {
+          status,
+          isAnonymous: false,
+          isArchived: false,
+        },
+        select: {
+          id: true,
+          title: true,
+          details: true,
+          status: true,
+          issuedAt: true,
+          location: true,
+          needsBarangayAssistance: true,
+          category: {
+            select: { name: true },
+          },
+          updates: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              updateMessage: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+          // Do NOT expose user identity on public endpoint
+        },
+      })
+    )
+  )
+
+  // Filter out nulls (status group may have no concerns yet)
+  return results.filter(Boolean)
+}
+
+/**
+ * Returns a single concern by ID for the public read-only page.
+ * Throws 404 if not found, anonymous, or archived.
+ */
+export const getPublicConcernById = async (id) => {
+  const concern = await prisma.concern.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      title: true,
+      details: true,
+      status: true,
+      issuedAt: true,
+      updatedAt: true,
+      location: true,
+      isAnonymous: true,
+      isArchived: true,
+      needsBarangayAssistance: true,
+      other: true,
+      category: {
+        select: { name: true },
+      },
+      updates: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          updateMessage: true,
+          status: true,
+          createdAt: true,
+          media: {
+            select: { url: true, type: true, name: true },
+          },
+        },
+      },
+      media: {
+        select: { url: true, type: true, name: true },
+      },
+      // No user field — keep reporter identity private on public page
+    },
+  })
+
+  if (!concern) {
+    throw new AppError("Concern not found", 404)
+  }
+
+  if (concern.isAnonymous || concern.isArchived) {
+    throw new AppError("This concern is not publicly viewable", 404)
+  }
+
+  return concern
 }

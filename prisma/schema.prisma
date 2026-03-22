@@ -212,7 +212,8 @@ model Feedback {
   isSpam           Boolean         @default(false)
   issuedAt         DateTime        @default(now())
   updatedAt        DateTime?       @updatedAt
-  star             Float?
+  star             Float?          @default(0)
+  isStared         Boolean         @default(false)
   categoryId       Int?
   category         Category?       @relation("feedbackCategory", fields: [categoryId], references: [id])
   other            String?

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Feedback" ADD COLUMN     "isStared" BOOLEAN NOT NULL DEFAULT false,
+ALTER COLUMN "star" SET DEFAULT 0;

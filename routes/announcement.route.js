@@ -6,6 +6,8 @@ import * as announcementPost from "../controllers/announcement/announcement.post
 import * as announcementQuery from "../controllers/announcement/announcement.query.js"
 const router = new Router()
 
+router.get('/residents', announcementQuery.getResidentAnnouncements)
+
 router.post("/",
     authenticateToken,
     authorizeRole("barangay_official"),
@@ -18,8 +20,8 @@ router.patch("/:id",
     authorizeRole("barangay_official"),
     announcementPost.updateAnnouncement
 )
-router.get("/:id", authenticateToken, announcementQuery.getAnnouncementById)
-router.get("/", authenticateToken, announcementQuery.getAllAnnouncements)
+router.get("/:id", announcementQuery.getAnnouncementById)
+router.get("/", announcementQuery.getAllAnnouncements)
 router.delete("/:id", authenticateToken, authorizeRole("barangay_official"), announcementPost.deleteAnnouncement)
 
 

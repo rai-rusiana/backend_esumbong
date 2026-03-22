@@ -13,7 +13,7 @@ import { initWebSocket } from "../lib/ws.js";
 import { createServer } from 'http';
 import summonRouter from "../routes/summon.route.js";
 import feedbackRouter from "../routes/feedback.route.js"
-
+import publicRoute from "../routes/stat.route.js"
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -41,6 +41,7 @@ app.use("/api/concern", concernRouter);
 
 app.use("/api/category", categoryRouter);
 
+app.use("/api/stats", publicRoute)
 
 //app.use("/api/feedbackCategory", categoryRouter);
 app.use("/api/summon", summonRouter);
@@ -71,6 +72,10 @@ if (process.env.NODE_ENV === "development") {
 
   console.log("\n📌 Notification Router endpoints:");
   console.table(listEndpoints(notificationRouter));
+
+  
+  console.log("\n📌 Announcements Router endpoints:");
+  console.table(listEndpoints(announcementRouter));
 }
 
 server.listen(PORT, "0.0.0.0", () => {

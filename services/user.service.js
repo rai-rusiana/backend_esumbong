@@ -54,10 +54,6 @@ export const loginUser = async (email, password) => {
   password = password.trim();
   console.log("Login service")
   const user = await prisma.user.findUnique({ where: { email } });
-  if (process.env.NODE_ENV === "development") {
-    console.log("User found:", user);
-    console.log("Loging attempt", { email, password });
-  }
   if (!user) {
     throw new AppError("Invalid credentials.", 401)
   }

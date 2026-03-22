@@ -1,24 +1,30 @@
 import * as feedbackService from "../../services/feedback.service.js";
 
 export const createFeedback = async (req, res) => {
-  const { title, isSpam, feedback, media = [], categoryId, other } = req.body;
-  const spam = isSpam === "true" ? true : false
+  const { title, isSpam, feedback, media = [], categoryId, other, star } = req.body;
+  const spam = isSpam === "true" || isSpam === true;
+
   if (!title || !feedback) {
     return res.status(400).json({
       error: "Title and Feedback fields are required",
     });
   }
 
+  // star must be 1–5 if provided
+  if (star !== undefined) {
+    const starNum = Number(star);
+    if (!Number.isInteger(starNum) || starNum < 1 || starNum > 5) {
+      return res.status(400).json({ error: "Star rating must be between 1 and 5" });
+    }
+  }
+
   const userId = req.user?.userId;
   try {
-    const feedbackCreation = await feedbackService.createFeedback(
-      { title, feedback, media, isSpam: spam, categoryId, other },
+    await feedbackService.createFeedback(
+      { title, feedback, media, isSpam: spam, categoryId, other, star: star ? Number(star) : null },
       parseInt(userId)
     );
-    console.log(feedbackCreation)
-    return res.status(201).json({
-      message: "Your feedback has been filed.",
-    });
+    return res.status(201).json({ message: "Your feedback has been filed." });
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.error("Error creating feedback:", error);
@@ -28,7 +34,6 @@ export const createFeedback = async (req, res) => {
     });
   }
 };
-
 
 export const deleteFeedback = async (req, res) => {
   const { id } = req.params
@@ -50,22 +55,33 @@ export const deleteFeedback = async (req, res) => {
     })
   }
 }
+
+// ─── Drop-in replacement for updateFeedbackById in feedback.controller.js ─────
+
 export const updateFeedbackById = async (req, res) => {
   const { id } = req.params;
-  const { title, feedback } = req.body;
+  const { title, feedback, star } = req.body;
   const userId = req.user?.userId;
 
-  if (!title && !feedback) {
+  if (!title && !feedback && star === undefined) {
     return res.status(400).json({
-      error: "At least one field (title or feedback) must be provided",
+      error: "At least one field (title, feedback, or star) must be provided",
     });
+  }
+
+  // Guard star value on the controller level too
+  if (star !== undefined) {
+    const s = Number(star);
+    if (!Number.isInteger(s) || s < 1 || s > 5) {
+      return res.status(400).json({ error: "Star rating must be between 1 and 5" });
+    }
   }
 
   try {
     const updatedFeedback = await feedbackService.updateFeedbackById(
       Number(id),
       Number(userId),
-      { title, feedback }
+      { title, feedback, star: star !== undefined ? Number(star) : undefined }
     );
 
     return res.status(200).json({
@@ -77,11 +93,9 @@ export const updateFeedbackById = async (req, res) => {
     if (error.name === "AppError") {
       return res.status(error.status).json({ error: error.message });
     }
-
     if (process.env.NODE_ENV === "development") {
       console.error("Error updating feedback:", error);
     }
-
     return res.status(500).json({
       error: "An error occurred while updating the feedback",
     });
