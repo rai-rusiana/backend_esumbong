@@ -365,7 +365,7 @@ export const validateConcern = async (concernId, data, userId, resolve) => {
     updatedConcern = await prisma.concern.update({
       where: { id: concernId },
       data: {
-        status: resolve, // <-- only status updated
+        status: data.validation, // <-- only status updated
       },
       include: {
         user: true, // to get the resident
